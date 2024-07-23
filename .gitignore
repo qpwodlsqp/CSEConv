@@ -1,0 +1,3 @@
+result/
+*.pth
+util/modelnet40_hdf5_2048
