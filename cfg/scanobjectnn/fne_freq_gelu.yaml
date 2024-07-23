@@ -1,0 +1,64 @@
+num_points: 1024
+conv:
+    0:
+        input_dim: 1
+        output_dim: 16
+        fourier_dim: 16
+        hidden_dim: 128
+        hidden_num: 2
+        freq: 16
+        do_norm: false
+        do_sample: true
+        k: 16
+        mc_num: 512
+        activation: "gelu"
+    1:
+        input_dim: 16
+        output_dim: 16
+        fourier_dim: 16
+        hidden_dim: 128
+        hidden_num: 2
+        freq: 8
+        do_norm: false
+        do_sample: true
+        k: 16
+        mc_num: 256
+        activation: "gelu"
+    2:
+        input_dim: 16
+        output_dim: 32
+        fourier_dim: 16
+        hidden_dim: 128
+        hidden_num: 2
+        freq: 4
+        do_norm: false
+        do_sample: true
+        k: 16
+        mc_num: 128
+        activation: "gelu"
+    3:
+        input_dim: 32
+        output_dim: 64
+        fourier_dim: 16
+        hidden_dim: 128
+        hidden_num: 2
+        freq: 1
+        do_norm: false
+        do_sample: true
+        k: 16
+        mc_num: 64
+        activation: "gelu"
+    4:
+        input_dim: 64
+        output_dim: 128
+        fourier_dim: 16
+        hidden_dim: 128
+        hidden_num: 2
+        freq: 0.5
+        do_norm: false
+        do_sample: true
+        k: 16
+        mc_num: 32
+        activation: "gelu"
+encoder:
+    pool: 'max'
