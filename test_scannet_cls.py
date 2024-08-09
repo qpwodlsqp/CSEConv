@@ -14,10 +14,20 @@ import os
 from tqdm import tqdm
 from omegaconf import OmegaConf
 
+parser = argparse.ArgumentParser(description='ScanObjectNN Classification Test',
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('--use_rotate', action='store_true', default=False,
+                    help='whether to test the model trained with SO3 augmentation')
+args_test = parser.parse_args()
+
 def main():
 
     # Load Checkpoint
-    ckpt = torch.load('weight/scanobjectnn/best.pth')
+    if args_test.use_rotate:
+        model_name = 'scannet_cls_rotated_best.pth'
+    else:
+        model_name = 'scannet_cls_best.pth'
+    ckpt = torch.load(f'weight/scannet/{model_name}')
     args = ckpt['args'] # configurations 
     # Reproducibility
     torch.backends.cudnn.benchmark = False
@@ -83,53 +93,8 @@ def main():
     print(f'\n[Clean] [SO3] Total Accuracy: {total_acc}')
     print('Accuracy per Class')
     print(acc_per_class)
-    '''
-    del modelnet
-    modelnet = ModelNet(num_points=num_points, use_rotate=False, use_noisy=True, test=True, batch=args.batchsize, workers=4)
-    testloader = modelnet.dataloader
-    # Classification Test
-    ans = torch.zeros(class_dim, 2)
-    with torch.no_grad():
-        for i, item in enumerate(tqdm(testloader, desc='test loader', position=1, leave=False)):
-            pc, label = item
-            pred = model(pc.to(device)).argmax(dim=-1).to('cpu')
-            label = label.squeeze(1)
-            ans[:, 0] += label.bincount(minlength=class_dim)
-            correct = pred[torch.where(pred == label)[0]]
-            ans[:, 1] += correct.bincount(minlength=class_dim)
-    acc_per_class = ans[:, 1] / ans[:, 0]
-    total_acc = ans[:, 1].sum() / ans[:, 0].sum()
-    print(f'\n[Noisy] [Id] Total Accuracy: {total_acc}')
-    print('Accuracy per Class')
-    print(acc_per_class)
-    del modelnet
-    modelnet = ModelNet(num_points=num_points, use_rotate=True, use_noisy=True, test=True, batch=args.batchsize, workers=4)
-    testloader = modelnet.dataloader
-    # Classification Test
-    ans = torch.zeros(class_dim, 2)
-    with torch.no_grad():
-        for i, item in enumerate(tqdm(testloader, desc='test loader', position=1, leave=False)):
-            pc, label = item
-            pred = model(pc.to(device)).argmax(dim=-1).to('cpu')
-            label = label.squeeze(1)
-            ans[:, 0] += label.bincount(minlength=class_dim)
-            correct = pred[torch.where(pred == label)[0]]
-            ans[:, 1] += correct.bincount(minlength=class_dim)
-    acc_per_class = ans[:, 1] / ans[:, 0]
-    total_acc = ans[:, 1].sum() / ans[:, 0].sum()
-    print(f'\n[Noisy] [SO3] Total Accuracy: {total_acc}')
-    print('Accuracy per Class')
-    print(acc_per_class)
-    del modelnet
-    '''
 
 if __name__ == '__main__':
 
-    if not os.path.exists('result'):
-        os.makedirs('result')
     main()
-
-
-
-
 

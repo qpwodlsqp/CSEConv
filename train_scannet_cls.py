@@ -8,10 +8,11 @@ from util.ScanObjectNN import ScanObjectNN
 from networks.models import SO3ScanNN as Model
 
 import argparse
-import time
 import wandb
 import datetime
 import os
+import shutil
+
 from tqdm import tqdm
 from omegaconf import OmegaConf
 
@@ -29,15 +30,15 @@ parser.add_argument('--use_noisy', action='store_true', default=False,
                     help='whether to augment train data other noisness')
 parser.add_argument('--batchsize', type=int, default=8, metavar='N',
                     help='mini-batch size')
-parser.add_argument('--epochs', type=int, default=40, metavar='N',
+parser.add_argument('--epochs', type=int, default=200, metavar='N',
                     help='number of epochs to train')
-parser.add_argument('--lr', type=float, default=1e-3, metavar='N',
+parser.add_argument('--lr', type=float, default=1e-4, metavar='N',
                     help='initial learning rate')
 parser.add_argument('--filter_decay', type=float, default=1e-3, metavar='N',
                     help='weight decay rate for filter function')
-parser.add_argument('--seed', type=int, default=1557, metavar='N',
+parser.add_argument('--seed', type=int, default=1601, metavar='N',
                     help='random seed')
-parser.add_argument('--log_every', type=int, default=300, metavar='N',
+parser.add_argument('--log_every', type=int, default=289, metavar='N',
                     help='logging interval')
 args = parser.parse_args()
 
@@ -84,7 +85,7 @@ def main():
     now = datetime.datetime.now()
     now_str = now.strftime('%m-%d-%H-%M-%S')
     # nick = f"FNE-method_3-feature_KNN-on-Euclid_8pi_Shift_{args.cfg}_{now_str}"
-    nick = f"New_{args.cfg}_{now_str}"
+    nick = f"CSEConv_{args.cfg}_{now_str}"
     os.makedirs(f"result/{nick}")
     wandb.init(project='ScanObjectNN Classification', entity='qpwodlsqp', config=vars(args))
     wandb.run.name = f'{nick}'
@@ -152,14 +153,11 @@ def main():
                 run_loss = []
         if args.use_scheduler:
             scheduler.step()
-        '''
-        save_dict = {'args': args,
-                     'model_state_dict': model.state_dict(),
-                     'opt_state_dict': optimizer.state_dict()}
-        if args.use_scheduler:
-            save_dict['sched_state_dict'] = scheduler.state_dict()
-        torch.save(save_dict, os.path.join('result', nick, f'{epoch}.pth'))
-        '''
+
+    if not os.path.exists(os.path.join('weight', 'scannet')):
+        os.makedirs(os.path.join('weight', 'scannet'))
+    weight_file_name = 'scannet_cls_rotated_best.pth' if args.use_rotate else 'scannet_cls_best.pth'
+    shutil.copy(os.path.join('result', nick, f"best.pth"), os.path.join('weight', 'scannet', weight_file_name))
     print(f'Best Step: {best_step}')
     print(f'Best Accuracy: {best_acc}')
 

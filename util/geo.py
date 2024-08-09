@@ -8,11 +8,6 @@ def sphere_coord_and_feature_move(X, r=1.):
     X = X - center
     feature = torch.linalg.norm(X, dim=-1, keepdim=True)
     X = X / feature # unit vectors
-    '''
-    theta = torch.atan2(X[..., 1], X[..., 0]).unsqueeze(-1) # longitude
-    phi = torch.arccos(X[..., 2]).unsqueeze(-1) # latitude
-    coord = torch.cat([theta, phi], dim=-1)
-    '''
     return X, feature/r 
 
 def sphere_coord_and_feature(X, r=1.):
@@ -20,11 +15,6 @@ def sphere_coord_and_feature(X, r=1.):
     # r is a dataset dependent value for feature normalization (KITTI; Velodyne HDL-64E)
     feature = torch.linalg.norm(X, dim=-1, keepdim=True)
     X = X / feature # unit vectors
-    '''
-    theta = torch.atan2(X[..., 1], X[..., 0]).unsqueeze(-1) # longitude
-    phi = torch.arccos(X[..., 2]).unsqueeze(-1) # latitude
-    coord = torch.cat([theta, phi], dim=-1)
-    '''
     return X, feature/r 
 
 def sphere_coord_and_feature_exp(X):

@@ -13,6 +13,8 @@ import time
 import wandb
 import datetime
 import os
+import shutil
+
 from tqdm import tqdm
 from omegaconf import OmegaConf
 
@@ -31,7 +33,7 @@ parser.add_argument('--use_quad', action='store_true', default=False,
                     help='whether to use quadruplet loss')
 parser.add_argument('--pos_num', type=int, default=2, metavar='N',
                     help='mini-batch size')
-parser.add_argument('--neg_num', type=int, default=10, metavar='N',
+parser.add_argument('--neg_num', type=int, default=8, metavar='N',
                     help='mini-batch size')
 
 parser.add_argument('--use_rotate', action='store_true', default=False,
@@ -59,7 +61,6 @@ assert os.path.isfile(cfg_path)
 def main():
 
     torch.backends.cudnn.benchmark = True
-    
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed(args.seed)
     np.random.seed(args.seed)
@@ -69,12 +70,13 @@ def main():
     cfg_dict = OmegaConf.load(cfg_path)
     try:
         num_points = cfg_dict['num_points']
+        print(f'The number of points is set to {num_points}')
     except KeyError:
         num_points = 2048
         print('The number of points is set to default: 2048')
     model = Model(cfg_dict)
     print('Load Classifier Model')
-    ckpt = torch.load('weight/modelnet/pretrained.pth')
+    ckpt = torch.load('weight/modelnet/modelnet_cls_best.pth')
     pretrained = ckpt['model_state_dict'] 
     conv_state_dict = {}
     bn_state_dict = {}
@@ -100,10 +102,8 @@ def main():
         param.requires_grad = False
     for param in model.pointnet.parameters():
         param.requires_grad = False
-    # print('no freeze')
     model.to(device)
     model.train()
-    # modelnet = ModelNet(num_points=num_points, test=False, use_rotate=args.use_rotate, use_noisy=args.use_noisy, batch=args.batchsize, workers=4)
     modelnet = ModelNet(num_points=num_points, test=False, pos_num=args.pos_num, neg_num=args.neg_num, use_rotate=args.use_rotate, use_noisy=args.use_noisy, use_quad=args.use_quad, batch=args.batchsize, workers=4)
     modelnet_valid = ModelNet(num_points=num_points, pos_num=1, neg_num=1, use_rotate=True, use_noisy=args.use_noisy, use_quad=args.use_quad, test=True, batch=args.batchsize, workers=4)
     trainloader = modelnet.dataloader
@@ -114,12 +114,11 @@ def main():
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs)
     now = datetime.datetime.now()
     now_str = now.strftime('%m-%d-%H-%M-%S')
-    nick = f"NEW_SO3-Metric-Pretrain_{args.cfg}_{now_str}"
+    nick = f"CSEConv-Metric_{args.cfg}_{now_str}"
     os.makedirs(f"result/{nick}")
     wandb.init(project='ModelNet40 Metric Learning', entity='qpwodlsqp', config=vars(args))
     wandb.run.name = f'{nick}'
 
-    #torch.autograd.set_detect_anomaly(True)
     class_dim = 40
     run_loss = []
     krr_reg_list = []
@@ -178,7 +177,6 @@ def main():
                     query_db = torch.cat(query_db, dim=0)
                     query_diff = query_db.unsqueeze(1) - query_db.unsqueeze(0)
                     query_diff = query_diff.norm(p=2, dim=-1)
-                    # dist, indices = torch.topk(query_diff, k=K+1, dim=-1, largest=False, sorted=True)
                     query_diff.fill_diagonal_(torch.tensor(float('inf')))
                     dist, indices = torch.topk(query_diff, k=K, dim=-1, largest=False, sorted=True)
 
@@ -217,13 +215,8 @@ def main():
                         torch.save(save_dict, os.path.join('result', nick, f'best.pth'))
 
                 wandb.log({'train loss': np.mean(run_loss),
-                           # 'valid loss': np.mean(valid_loss),
-                           # 'KRR Reg'   : np.mean(krr_reg_list),
-                           # 'Omega Reg' : np.mean(basis_omega_list),
                            'train pos dist': np.mean(train_pos_dist),
                            'train neg dist': np.mean(train_neg_dist),
-                           # 'valid pos dist': np.mean(valid_pos_dist),
-                           # 'valid neg dist': np.mean(valid_neg_dist),
                            'mAP': mAP}, i_step//args.log_every - 1)
                 run_loss = []
                 krr_reg_list = []
@@ -232,14 +225,14 @@ def main():
                 train_neg_dist = []
         if args.use_scheduler:
             scheduler.step()
-        '''
-        save_dict = {'args': args,
-                     'model_state_dict': model.state_dict(),
-                     'opt_state_dict': optimizer.state_dict()}
-        if args.use_scheduler:
-            save_dict['sched_state_dict'] = scheduler.state_dict()
-        torch.save(save_dict, os.path.join('result', nick, f'{epoch}.pth'))
-        '''
+
+    if not os.path.exists(os.path.join('weight', 'modelnet')):
+        os.makedirs(os.path.join('weight', 'modelnet'))
+    weight_file_name = 'modelnet_metric_best.pth'
+    shutil.copy(os.path.join('result', nick, f"best.pth"), os.path.join('weight', 'modelnet', weight_file_name))
+    print(f'Best Step: {best_step}')
+    print(f'Best mAP: {best_mAP}')
+
 
 if __name__ == '__main__':
 

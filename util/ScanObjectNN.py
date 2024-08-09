@@ -11,6 +11,7 @@ import torch
 import numpy as np
 import random
 from torch.utils.data import Dataset, DataLoader
+from pytorch3d.transforms import random_rotation
 
 # os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
@@ -71,20 +72,21 @@ def rotate_pointcloud(pointcloud):
         Return:
           BxNx3 array, point clouds
     """
-    rs = np.random.rand(3)
-    angle_z1 = np.arccos(2 * rs[0] - 1)
-    angle_y = np.pi*2 * rs[1]
-    angle_z2 = np.pi*2 * rs[2]
-    Rz1 = np.array([[np.cos(angle_z1),-np.sin(angle_z1),0],
-                    [np.sin(angle_z1),np.cos(angle_z1),0],
-                    [0,0,1]])
-    Ry = np.array([[np.cos(angle_y),0,np.sin(angle_y)],
-                    [0,1,0],
-                    [-np.sin(angle_y),0,np.cos(angle_y)]])
-    Rz2 = np.array([[np.cos(angle_z2),-np.sin(angle_z2),0],
-                    [np.sin(angle_z2),np.cos(angle_z2),0],
-                    [0,0,1]])
-    R = np.dot(Rz1, np.dot(Ry,Rz2)).astype('float32')
+    # rs = np.random.rand(3)
+    # angle_z1 = np.arccos(2 * rs[0] - 1)
+    # angle_y = np.pi*2 * rs[1]
+    # angle_z2 = np.pi*2 * rs[2]
+    # Rz1 = np.array([[np.cos(angle_z1),-np.sin(angle_z1),0],
+    #                 [np.sin(angle_z1),np.cos(angle_z1),0],
+    #                 [0,0,1]])
+    # Ry = np.array([[np.cos(angle_y),0,np.sin(angle_y)],
+    #                 [0,1,0],
+    #                 [-np.sin(angle_y),0,np.cos(angle_y)]])
+    # Rz2 = np.array([[np.cos(angle_z2),-np.sin(angle_z2),0],
+    #                 [np.sin(angle_z2),np.cos(angle_z2),0],
+    #                 [0,0,1]])
+    # R = np.dot(Rz1, np.dot(Ry,Rz2)).astype('float32')
+    R = random_rotation().numpy()
     pointcloud = R.dot(pointcloud.T).T
     return pointcloud
 

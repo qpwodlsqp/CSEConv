@@ -12,6 +12,8 @@ import time
 import wandb
 import datetime
 import os
+import shutil
+
 from tqdm import tqdm
 from omegaconf import OmegaConf
 
@@ -33,7 +35,7 @@ parser.add_argument('--batchsize', type=int, default=16, metavar='N',
                     help='mini-batch size')
 parser.add_argument('--epochs', type=int, default=200, metavar='N',
                     help='number of epochs to train')
-parser.add_argument('--lr', type=float, default=1e-4, metavar='N',
+parser.add_argument('--lr', type=float, default=1e-3, metavar='N',
                     help='initial learning rate')
 parser.add_argument('--seed', type=int, default=1557, metavar='N',
                     help='random seed')
@@ -66,7 +68,6 @@ def main():
     model.to(device)
     model.train()
     criterion = nn.CrossEntropyLoss()
-    # criterion = nn.NLLLoss()
     modelnet = ModelNet(num_points=num_points, test=False, use_rotate=args.use_rotate, use_noisy=args.use_noisy, batch=args.batchsize, workers=4)
     modelnet_valid = ModelNet(num_points=num_points, use_rotate=True, use_noisy=False, test=True, batch=2*args.batchsize, workers=4)
     trainloader = modelnet.dataloader
@@ -75,14 +76,11 @@ def main():
         optimizer = optim.SGD(model.parameters(), lr=args.lr)
     else:
         optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-5)
     if args.use_scheduler:
-        # scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, min(args.epochs, 200), eta_min=1e-5)
-        scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, 25, 2, eta_min=1e-5)
-        # scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.5)
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, min(args.epochs, 200), eta_min=1e-5)
     now = datetime.datetime.now()
     now_str = now.strftime('%m-%d-%H-%M-%S')
-    nick = f"CSEConv-2BQ_{args.cfg}_{now_str}"
+    nick = f"CSEConv_{args.cfg}_{now_str}"
     os.makedirs(f"result/{nick}")
     wandb.init(project='ModelNet40 Classification', entity='qpwodlsqp', config=vars(args))
     wandb.run.name = f'{nick}'
@@ -139,16 +137,6 @@ def main():
                            'total_acc': np.mean(total_acc.item()),
                            'TRAIN MEM MAX': highest_mem,
                            'TEST MEM MAX': test_highest_mem,}, i_step//args.log_every - 1)
-
-                ''' # Save Only Best
-                save_dict = {'args': args,
-                             'model_state_dict': model.state_dict(),
-                             'opt_state_dict': optimizer.state_dict()}
-                if args.use_scheduler:
-                    save_dict['sched_state_dict'] = scheduler.state_dict()
-                torch.save(save_dict, os.path.join('result', nick, f'epoch_{epoch}.pth'))
-                '''
-
                 if best_acc < np.mean(total_acc.item()):
                     best_step = i_step
                     best_acc = np.mean(total_acc.item())
@@ -162,6 +150,10 @@ def main():
         if args.use_scheduler:
             scheduler.step()
 
+    if not os.path.exists(os.path.join('weight', 'modelnet')):
+        os.makedirs(os.path.join('weight', 'modelnet'))
+    weight_file_name = 'modelnet_cls_rotated_best.pth' if args.use_rotate else 'modelnet_cls_best.pth'
+    shutil.copy(os.path.join('result', nick, f"best.pth"), os.path.join('weight', 'modelnet', weight_file_name))
     print(f'Best Step: {best_step}')
     print(f'Best Accuracy: {best_acc}')
 

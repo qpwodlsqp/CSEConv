@@ -9,35 +9,16 @@ from util.modelnet40_metric import ModelNet
 from networks.models import SO3ModelNetMetric as Model
 
 import argparse
-import time
-import wandb
-import datetime
-import os
 from tqdm import tqdm
 from omegaconf import OmegaConf
 
-parser = argparse.ArgumentParser(description='ModelNet40 Classification',
-                                formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
-parser.add_argument('--cfg', type=str, default=None, metavar='N',
-                    help='configuration file name for the model architecture')
-
-parser.add_argument('--use_rotate', action='store_true', default=False,
-                    help='whether to augment train data with random SO3 rotation')
-parser.add_argument('--use_noisy', action='store_true', default=False,
-                    help='whether to augment train data other noisness')
-parser.add_argument('--batchsize', type=int, default=16, metavar='N',
-                    help='mini-batch size')
-parser.add_argument('--seed', type=int, default=1557, metavar='N',
-                    help='random seed')
-parser.add_argument('--log_every', type=int, default=300, metavar='N',
-                    help='logging interval')
-args = parser.parse_args()
+import matplotlib
+import matplotlib.pyplot as plt
 
 def main():
 
     # Load Checkpoint
-    ckpt = torch.load('weight/modelnet/metric_best_pretrained.pth')
+    ckpt = torch.load('weight/modelnet/modelnet_metric_best.pth')
     args = ckpt['args'] # configurations  
     # Reproducibility
     torch.backends.cudnn.benchmark = False
@@ -62,10 +43,9 @@ def main():
     modelnet = ModelNet(num_points=num_points, pos_num=1, neg_num=1, test=True, use_rotate=True, use_noisy=False, batch=args.batchsize, workers=4)
     dataloader = modelnet.dataloader
     label_list = modelnet.dataset.label
-    now = datetime.datetime.now()
-    #torch.autograd.set_detect_anomaly(True)
     query_db = []
     K = 240
+    cls_name_dict = {}
     with torch.no_grad():
         for i, item in enumerate(tqdm(dataloader, desc='query vec reading', position=0)):
             anchor, _, _ = item
@@ -83,11 +63,16 @@ def main():
         count = 0
         precision_every = np.zeros(K)
         recall_every = np.zeros(K)
+        recall_per_class = np.zeros((40, K))
+        class_count = np.zeros((40, 1))
         precision_list = []
         for i, idx in enumerate(indices):
             ref_class = label_list[i]
+            cls_name = modelnet.dataset.name[i]
+            cls_name_dict[ref_class.item()] = cls_name
             retrieved_class = label_list[idx.tolist()]
             recall = (retrieved_class==ref_class)
+            class_count[ref_class] += 1
             if recall.sum() == 0:
                 precision_list.append(0.)
                 continue
@@ -103,6 +88,7 @@ def main():
             recall = np.cumsum(recall)
             recall = (recall > 0)
             recall_every += recall
+            recall_per_class[ref_class, :] += recall
             count += 1
         one_percent = int(N / 100)
         print(f'1% = {one_percent}')
@@ -112,11 +98,30 @@ def main():
         print(recall_every[:one_percent] / count)
         print('mAP')
         print(np.mean(precision_list))
+        class_recall_at_1 = (recall_per_class / class_count)[:, :1].flatten()
+        print('Recall per class @1')
+        print(class_recall_at_1)
+        # Draw a horizontal bar plot of AR@1 per class
+        cls_idx = np.arange(40)
+        ar1_sorted_idx = class_recall_at_1.argsort()
+        ar1 = class_recall_at_1[ar1_sorted_idx]
+        cls_idx = cls_idx[ar1_sorted_idx]
+        cls_bar = [cls_name_dict[cls_idx[i]] for i in range(40)]
+        fig = plt.figure(figsize=(18, 14))
+        ax = fig.add_subplot()
+        ax.barh(np.arange(40), ar1, height=0.6, align='center', color=plt.get_cmap('bwr_r')(ar1), edgecolor='black')
+        ax.set_yticks(np.arange(40), labels=cls_bar, fontsize=24)
+        ax.tick_params(axis='x', labelsize=24)
+        ax.invert_yaxis()
+        ax.set_xlabel('Average Recall @1', fontsize=30)
+        ax.margins(y=0.01, x=0.02)
+        plt.tight_layout()
+        plt.savefig('ar1_barh.png')
+        return
  
+
 if __name__ == '__main__':
 
-    if not os.path.exists('result'):
-        os.makedirs('result')
     main()
 
 

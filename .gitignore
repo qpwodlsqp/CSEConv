@@ -1,4 +1,7 @@
 result/
 *.pth
+*.zip
 util/modelnet40_hdf5_2048
 */__pycache__/*
+wandb/
+weight/
