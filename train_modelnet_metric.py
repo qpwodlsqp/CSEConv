@@ -18,11 +18,14 @@ import shutil
 from tqdm import tqdm
 from omegaconf import OmegaConf
 
-parser = argparse.ArgumentParser(description='ModelNet40 Classification',
+parser = argparse.ArgumentParser(description='ModelNet40 Metric Learning',
                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument('--cfg', type=str, default=None, metavar='N',
                     help='configuration file name for the model architecture')
+parser.add_argument('--wandb_id', type=str, default=None, metavar='N',
+                    help='your wandb id')
+
 parser.add_argument('--alpha', type=float, default=1.2, metavar='N',
                     help='hyperparam for triplet & quadruplet')
 parser.add_argument('--beta', type=float, default=0.2, metavar='N',
@@ -55,6 +58,7 @@ parser.add_argument('--use_scheduler', action='store_true', default=False,
 args = parser.parse_args()
 
 assert args.cfg is not None
+assert args.wandb_id is not None
 cfg_path = os.path.join(os.getcwd(), 'cfg', 'modelnet', f'{args.cfg}.yaml')
 assert os.path.isfile(cfg_path)
 
@@ -116,7 +120,7 @@ def main():
     now_str = now.strftime('%m-%d-%H-%M-%S')
     nick = f"CSEConv-Metric_{args.cfg}_{now_str}"
     os.makedirs(f"result/{nick}")
-    wandb.init(project='ModelNet40 Metric Learning', entity='qpwodlsqp', config=vars(args))
+    wandb.init(project='ModelNet40 Metric Learning', entity=args.wandb_id, config=vars(args))
     wandb.run.name = f'{nick}'
 
     class_dim = 40

@@ -22,6 +22,8 @@ parser = argparse.ArgumentParser(description='ModelNet40 Classification',
 
 parser.add_argument('--cfg', type=str, default=None, metavar='N',
                     help='configuration file name for the model architecture')
+parser.add_argument('--wandb_id', type=str, default=None, metavar='N',
+                    help='your wandb id')
 
 parser.add_argument('--use_scheduler', action='store_true', default=False,
                     help='whether to cosine annealing scheduler for learning rate')
@@ -44,6 +46,7 @@ parser.add_argument('--log_every', type=int, default=308, metavar='N',
 args = parser.parse_args()
 
 assert args.cfg is not None
+assert args.wandb_id is not None
 cfg_path = os.path.join(os.getcwd(), 'cfg', 'modelnet', f'{args.cfg}.yaml')
 assert os.path.isfile(cfg_path)
 
@@ -82,7 +85,7 @@ def main():
     now_str = now.strftime('%m-%d-%H-%M-%S')
     nick = f"CSEConv_{args.cfg}_{now_str}"
     os.makedirs(f"result/{nick}")
-    wandb.init(project='ModelNet40 Classification', entity='qpwodlsqp', config=vars(args))
+    wandb.init(project='ModelNet40 Classification', entity=args.wandb_id, config=vars(args))
     wandb.run.name = f'{nick}'
 
     #torch.autograd.set_detect_anomaly(True)
