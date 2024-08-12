@@ -22,6 +22,7 @@ class PointNet(nn.Module):
         # B x C x N x 1 => B x C x 1 x 1
         return self.pointnet(x).squeeze(-1).squeeze(-1)
 
+'''
 class PointNetBN(nn.Module):
 
     def __init__(self, num_points, c_in, c_out, h_dim=256, pool='max'):
@@ -48,5 +49,5 @@ class PointNetBN(nn.Module):
         x = x.permute(0, 2, 1)
         # B x C x N => B x C
         return self.pointnet(x).squeeze(-1)
-
+'''
 

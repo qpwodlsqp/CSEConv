@@ -86,7 +86,7 @@ class SO3ScanNN(nn.Module):
                                  cfg_dict['conv'][conv_len-1]['output_dim'],
                                  1024)
         self.classifier = nn.Sequential(
-            nn.Linear(1024, 256), # 64
+            nn.Linear(1024, 256),
             nn.ReLU(),
             nn.Linear(256, class_dim),
         )
@@ -131,7 +131,7 @@ class SO3ModelNetMetric(nn.Module):
                                  cfg_dict['conv'][conv_len-1]['output_dim'],
                                  1024)
         self.metric = nn.Sequential(
-            nn.Linear(1024, 2048), # 64
+            nn.Linear(1024, 2048),
             nn.ReLU(),
             nn.Linear(2048, 1024),
             nn.ReLU(),
@@ -157,28 +157,5 @@ class SO3ModelNetMetric(nn.Module):
         F = self.pointnet(F)
         F = self.metric(F)
         return nn.functional.normalize(F, p=2, dim=-1)
-
-
-if __name__ == '__main__':
-
-    torch.backends.cudnn.benchmark = True
-    import time
-    #from util.oxford import Oxford
-    from util.shapenetpart import ShapeNetPart
-    from omegaconf import OmegaConf
-    import pytorch3d
-    from torch.profiler import profile, record_function, ProfilerActivity
-    device = torch.device('cuda')
-    cfg_dict = OmegaConf.load('cfg/shapenetpart/shapenetpart_default.yaml')
-    model = CSE2ConvShapeNetPart(cfg_dict)
-    model = model.to(device)
-    oxford = ShapeNetPart(num_points=2048, split='train', batch=8)
-    with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], profile_memory=True, record_shapes=True) as prof: 
-        for i, (pc, label, seg) in enumerate(oxford.dataloader):
-            pc = pc.to(device); label = label.to(device)
-            f = model(pc, label)
-            print(f.shape); print(seg.shape)
-            if i >= 25: break
-    print(prof.key_averages().table(sort_by="cuda_memory_usage", row_limit=20))
 
 

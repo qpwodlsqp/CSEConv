@@ -1,10 +1,28 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-@Author: An Tao
-@Contact: ta19@mails.tsinghua.edu.cn
-@File: dataset.py
-@Time: 2020/1/2 10:26 AM
+Adopted from https://github.com/antao97/PointCloudDatasets
+MIT License
+
+Copyright (c) 2019 An Tao
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 """
 
 import os
@@ -44,43 +62,10 @@ def jitter_pointcloud(pointcloud, sigma=0.01, clip=0.02):
 
 
 def rotate_pointcloud(pointcloud):
-    '''
-    Q, _ = np.linalg.qr(np.random.normal(size=(3, 3)))
-    Q = Q.astype(np.float32)
-    # theta = np.pi*2 * np.random.rand()
-    # rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])
-    # pointcloud[:,[0,1]] = pointcloud[:,[0,1]].dot(rotation_matrix) # random rotation (x,z)
-    '''
-    """ Randomly rotate the point clouds uniformly
-        https://math.stackexchange.com/a/442423
-        Input:
-          BxNx3 array, point clouds
-        Return:
-          BxNx3 array, point clouds
-    """
-    '''
-    rs = np.random.rand(3)
-    angle_z1 = np.arccos(2 * rs[0] - 1)
-    angle_y = np.pi*2 * rs[1]
-    angle_z2 = np.pi*2 * rs[2]
-    Rz1 = np.array([[np.cos(angle_z1),-np.sin(angle_z1),0],
-                    [np.sin(angle_z1),np.cos(angle_z1),0],
-                    [0,0,1]])
-    Ry = np.array([[np.cos(angle_y),0,np.sin(angle_y)],
-                    [0,1,0],
-                    [-np.sin(angle_y),0,np.cos(angle_y)]])
-    Rz2 = np.array([[np.cos(angle_z2),-np.sin(angle_z2),0],
-                    [np.sin(angle_z2),np.cos(angle_z2),0],
-                    [0,0,1]])
-    R = np.dot(Rz2, np.dot(Ry, Rz1)).astype('float32')
-    pointcloud = R.dot(pointcloud.T).T
-    return pointcloud
-    '''
+
     R = random_rotation().numpy()
     pointcloud = R.dot(pointcloud.T).T
     return pointcloud
-
-
 
 
 class ModelNetDataset(data.Dataset):
@@ -105,7 +90,7 @@ class ModelNetDataset(data.Dataset):
         if os.path.exists(os.path.join(root, dataset_name + '_hdf5_2048')):
             self.root = os.path.join(root, dataset_name + '_hdf5_2048')
         else:
-            self.root = os.path.join(root, 'util', dataset_name + '_hdf5_2048')
+            self.root = os.path.join(root, 'dataset', dataset_name + '_hdf5_2048') # util -> dataset
         self.dataset_name = dataset_name
         self.class_choice = class_choice
         self.num_points = num_points
@@ -282,7 +267,10 @@ class ModelNet:
         # choose split type from 'train', 'test', 'all', 'trainval' and 'val'
         # only shapenetcorev2 and shapenetpart dataset support 'trainval' and 'val'
         split = 'test' if test else 'train'
-        class_choice = ['airplane', 'bathtub', 'bed', 'bench','bookshelf', 'bottle', 'bowl', 'car', 'chair', 'cone','cup', 'curtain', 'desk', 'door', 'dresser', 'flower_pot', 'glass_box', 'guitar', 'keyboard', 'lamp', 'laptop', 'mantel', 'monitor', 'night_stand', 'person', 'piano', 'plant', 'radio', 'range_hood', 'sink', 'sofa', 'stairs', 'stool', 'table', 'tent', 'toilet', 'tv_stand', 'vase', 'wardrobe', 'xbox']
+        class_choice = ['airplane', 'bathtub', 'bed', 'bench','bookshelf', 'bottle', 'bowl', 'car', 'chair', 'cone', \
+                        'cup', 'curtain', 'desk', 'door', 'dresser', 'flower_pot', 'glass_box', 'guitar', 'keyboard', 'lamp', \
+                        'laptop', 'mantel', 'monitor', 'night_stand', 'person', 'piano', 'plant', 'radio', 'range_hood', 'sink', 'sofa', \
+                        'stairs', 'stool', 'table', 'tent', 'toilet', 'tv_stand', 'vase', 'wardrobe', 'xbox']
  
         self.dataset = ModelNetDataset(root=root,
                                        dataset_name = dataset_name,
@@ -313,23 +301,5 @@ class ModelNet:
                                           worker_init_fn = seed_worker,
                                           generator = g)
         return
-
-
-if __name__ == '__main__':
-    root = os.getcwd()
-
-    # choose dataset name from 'shapenetcorev2', 'shapenetpart', 'modelnet40' and 'modelnet10'
-    dataset_name = 'modelnet40'
-
-    # choose split type from 'train', 'test', 'all', 'trainval' and 'val'
-    # only shapenetcorev2 and shapenetpart dataset support 'trainval' and 'val'
-    split = 'train'
-
-    modelnet = ModelNet(test=True)
-    print(f"datasize: {len(modelnet.dataset)}")
-    for i, (anchor, pos, neg) in enumerate(modelnet.dataloader):
-        print(f'{anchor.shape} {pos.shape} {neg.shape}')
-        if i >= 10: break
- 
 
 

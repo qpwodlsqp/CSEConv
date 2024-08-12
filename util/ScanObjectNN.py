@@ -1,6 +1,5 @@
 """
-code adopted from: https://github.com/ma-xu/pointMLP-pytorch/blob/main/classification_ScanObjectNN/ScanObjectNN.py
-ScanObjectNN download: http://103.24.77.34/scanobjectnn/h5_files.zip
+code modified from: https://github.com/ma-xu/pointMLP-pytorch/blob/main/classification_ScanObjectNN/ScanObjectNN.py
 """
 
 import os
@@ -13,33 +12,18 @@ import random
 from torch.utils.data import Dataset, DataLoader
 from pytorch3d.transforms import random_rotation
 
-# os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
-
-'''
-def download():
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    DATA_DIR = os.path.join(BASE_DIR, 'data')
-    if not os.path.exists(DATA_DIR):
-        os.mkdir(DATA_DIR)
-    if not os.path.exists(os.path.join(DATA_DIR, 'h5_files')):
-        # note that this link only contains the hardest perturbed variant (PB_T50_RS).
-        # for full versions, consider the following link.
-        www = 'https://web.northeastern.edu/smilelab/xuma/datasets/h5_files.zip'
-        # www = 'http://103.24.77.34/scanobjectnn/h5_files.zip'
-        zipfile = os.path.basename(www)
-        os.system('wget %s  --no-check-certificate; unzip %s' % (www, zipfile))
-        os.system('mv %s %s' % (zipfile[:-4], DATA_DIR))
-        os.system('rm %s' % (zipfile))
-'''
 
 def load_scanobjectnn_data(partition):
-    # download()
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    BASE_DIR = os.getcwd()
     all_data = []
     all_label = []
 
-    # h5_name = BASE_DIR + '/data/h5_files/main_split/' + partition + '_objectdataset_augmentedrot_scale75.h5'
-    h5_name = '/data/jykim/h5_files/main_split_nobg/' + partition + '_objectdataset.h5'
+    if os.path.exists(os.path.join(BASE_DIR, 'h5_files', 'main_split_nobg')):
+        root_dir = os.path.join(BASE_DIR, 'h5_files', 'main_split_nobg')
+    else:
+        root_dir = os.path.join(BASE_DIR, 'dataset', 'h5_files', 'main_split_nobg')
+ 
+    h5_name = os.path.join(root_dir, partition + '_objectdataset.h5')
     f = h5py.File(h5_name, mode="r")
     data = f['data'][:].astype('float32')
     label = f['label'][:].astype('int64')
@@ -58,34 +42,7 @@ def jitter_pointcloud(pointcloud, sigma=0.01, clip=0.02):
 
 
 def rotate_pointcloud(pointcloud):
-    '''
-    Q, _ = np.linalg.qr(np.random.normal(size=(3, 3)))
-    Q = Q.astype(np.float32)
-    # theta = np.pi*2 * np.random.rand()
-    # rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])
-    # pointcloud[:,[0,1]] = pointcloud[:,[0,1]].dot(rotation_matrix) # random rotation (x,z)
-    '''
-    """ Randomly rotate the point clouds uniformly
-        https://math.stackexchange.com/a/442423
-        Input:
-          BxNx3 array, point clouds
-        Return:
-          BxNx3 array, point clouds
-    """
-    # rs = np.random.rand(3)
-    # angle_z1 = np.arccos(2 * rs[0] - 1)
-    # angle_y = np.pi*2 * rs[1]
-    # angle_z2 = np.pi*2 * rs[2]
-    # Rz1 = np.array([[np.cos(angle_z1),-np.sin(angle_z1),0],
-    #                 [np.sin(angle_z1),np.cos(angle_z1),0],
-    #                 [0,0,1]])
-    # Ry = np.array([[np.cos(angle_y),0,np.sin(angle_y)],
-    #                 [0,1,0],
-    #                 [-np.sin(angle_y),0,np.cos(angle_y)]])
-    # Rz2 = np.array([[np.cos(angle_z2),-np.sin(angle_z2),0],
-    #                 [np.sin(angle_z2),np.cos(angle_z2),0],
-    #                 [0,0,1]])
-    # R = np.dot(Rz1, np.dot(Ry,Rz2)).astype('float32')
+
     R = random_rotation().numpy()
     pointcloud = R.dot(pointcloud.T).T
     return pointcloud
@@ -122,11 +79,7 @@ class ScanObjectNNDataset(Dataset):
         pointcloud = self.data[item][:self.num_points]
         label = self.label[item]
 
-        # Pre-process ?
         pointcloud = pointcloud - pointcloud.mean(axis=0, keepdims=True)
-        # pointcloud = pointcloud / np.sqrt((pointcloud**2).sum(axis=-1, keepdims=True)).max()
-        
-        # pointcloud = pointcloud / np.linalg.norm(pointcloud, axis=1).max()
         if self.random_rotate:
             pointcloud = rotate_pointcloud(pointcloud)
         if self.random_jitter:
@@ -164,13 +117,6 @@ class ScanObjectNN:
 
         g = torch.Generator()
         g.manual_seed(0)
-        '''
-        self.dataloader = DataLoader(self.dataset,
-                                     batch_size = batch,
-                                     shuffle = True, # not test,
-                                     num_workers = workers,
-                                     worker_init_fn = lambda _ : np.random.seed())
-        '''
         self.dataloader = DataLoader(self.dataset,
                                      batch_size = batch,
                                      shuffle = not test,
@@ -180,106 +126,206 @@ class ScanObjectNN:
         return
 
 
-if __name__ == '__main__':
+"""
+                                 Apache License
+                           Version 2.0, January 2004
+                        http://www.apache.org/licenses/
 
-    from geo import *
-    import matplotlib.pyplot as plt
-    import pytorch3d.ops as ops
+   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
 
-    '''
-    def theta_bins(X):
+   1. Definitions.
 
-        k = 16
-        mc_num = 256
+      "License" shall mean the terms and conditions for use, reproduction,
+      and distribution as defined by Sections 1 through 9 of this document.
 
-        X, F = sphere_coord_and_feature(X)
-        B = X.size(0); N = X.size(1); D = F.size(-1)
-        # old do sample logic
-        Q, q_idx = ops.sample_farthest_points(X, K=mc_num, random_start_point=True)
-        # KNN neighbor
-        knn_result = ops.knn_points(Q, X, K=k, return_nn=True)
-        X = knn_result.knn.view(B, -1, 3) # knn_X
-        # knn_F = ops.knn_gather(F, knn_result.idx.clone()).view(B, -1, F.size(-1))
+      "Licensor" shall mean the copyright owner or entity authorized by
+      the copyright owner that is granting the License.
 
-        B = X.size(0); N = X.size(1)
-        X = X.view(B, N//k, k, 3)       # R^{B x #query x k x 3}
-        Q = X[:, :, 0, :].unsqueeze(-2) # R^{B x #query x 1 x 3} which are the centroids of bundles
-        Q = Q.expand(B, N//k, k, 3).reshape(B*N, 3)
-        npole = torch.zeros_like(Q); npole[:, 2] += 1
-        R_ref = rotation_between_s2points(Q, npole)
-        X = torch.bmm(R_ref, X.view(-1, 3, 1))
-        X = X.view(B, N, 3)
-        theta = torch.acos(torch.clip(X[:, :, 2:3], min=-1.+1e-6, max=1.-1e-6))
-        return theta.flatten()
- 
+      "Legal Entity" shall mean the union of the acting entity and all
+      other entities that control, are controlled by, or are under common
+      control with that entity. For the purposes of this definition,
+      "control" means (i) the power, direct or indirect, to cause the
+      direction or management of such entity, whether by contract or
+      otherwise, or (ii) ownership of fifty percent (50%) or more of the
+      outstanding shares, or (iii) beneficial ownership of such entity.
 
-    train = ScanObjectNN(1024, True, True, batch=1)
-    test = ScanObjectNN(1024, test=True, batch=1)
+      "You" (or "Your") shall mean an individual or Legal Entity
+      exercising permissions granted by this License.
 
-    class_num = 11
-    count = 0
-    for i, (data, label) in enumerate(train.dataloader):
-        if label.item() != class_num: continue
-        count += 1
-        thetas = theta_bins(data)
-        thetas = thetas.numpy()
-        hist, bins = np.histogram(thetas, bins=100)
-        plt.clf()
-        plt.xlim(0, 1.)
-        plt.bar(bins[:-1], hist, width=np.diff(bins))
-        plt.savefig(f'train_{count}.png')
-        print(f'Train {count}')
-        if count >= 10: break
+      "Source" form shall mean the preferred form for making modifications,
+      including but not limited to software source code, documentation
+      source, and configuration files.
 
-    count = 0
-    for i, (data, label) in enumerate(test.dataloader):
-        if label.item() != class_num: continue
-        count += 1
-        thetas = theta_bins(data)
-        thetas = theta_bins(data)
-        thetas = thetas.numpy()
-        hist, bins = np.histogram(thetas, bins=100)
-        plt.clf()
-        plt.xlim(0, 1.)
-        plt.bar(bins[:-1], hist, width=np.diff(bins))
-        plt.savefig(f'test_{count}.png')
- 
-        print(f'Test {count}')
-        if count >= 10: break
-    '''
+      "Object" form shall mean any form resulting from mechanical
+      transformation or translation of a Source form, including but
+      not limited to compiled object code, generated documentation,
+      and conversions to other media types.
 
-    train = ScanObjectNN(1024, True, True, test=False, batch=16)
-    test = ScanObjectNN(1024, test=True, batch=1)
+      "Work" shall mean the work of authorship, whether in Source or
+      Object form, made available under the License, as indicated by a
+      copyright notice that is included in or attached to the work
+      (an example is provided in the Appendix below).
 
-    for i, (pc, label) in enumerate(train.dataloader):
+      "Derivative Works" shall mean any work, whether in Source or Object
+      form, that is based on (or derived from) the Work and for which the
+      editorial revisions, annotations, elaborations, or other modifications
+      represent, as a whole, an original work of authorship. For the purposes
+      of this License, Derivative Works shall not include works that remain
+      separable from, or merely link (or bind by name) to the interfaces of,
+      the Work and Derivative Works thereof.
 
-        print(pc.shape)
-        print(label.shape)
+      "Contribution" shall mean any work of authorship, including
+      the original version of the Work and any modifications or additions
+      to that Work or Derivative Works thereof, that is intentionally
+      submitted to Licensor for inclusion in the Work by the copyright owner
+      or by an individual or Legal Entity authorized to submit on behalf of
+      the copyright owner. For the purposes of this definition, "submitted"
+      means any form of electronic, verbal, or written communication sent
+      to the Licensor or its representatives, including but not limited to
+      communication on electronic mailing lists, source code control systems,
+      and issue tracking systems that are managed by, or on behalf of, the
+      Licensor for the purpose of discussing and improving the Work, but
+      excluding communication that is conspicuously marked or otherwise
+      designated in writing by the copyright owner as "Not a Contribution."
 
-    '''
-        pc = pc.squeeze(0)
-        print(f'{i+1} PC')
-        print(pc.mean(dim=0))
-        print(pc.norm(dim=-1).max())
-        pc = pc / pc.norm(dim=-1).max()
-        print(pc.mean(dim=0))
-        print(pc.shape)
-        print(label.shape)
-        if i >= 9: break
+      "Contributor" shall mean Licensor and any individual or Legal Entity
+      on behalf of whom a Contribution has been received by Licensor and
+      subsequently incorporated within the Work.
 
-    print('########################################')
-    for i, (pc, label) in enumerate(test.dataloader):
+   2. Grant of Copyright License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      copyright license to reproduce, prepare Derivative Works of,
+      publicly display, publicly perform, sublicense, and distribute the
+      Work and such Derivative Works in Source or Object form.
 
-        pc = pc.squeeze(0)
-        print(f'{i+1} PC')
-        print(pc.mean(dim=0))
-        print(pc.norm(dim=-1).max())
-        pc = pc / pc.norm(dim=-1).max()
-        print(pc.mean(dim=0))
-        if i >= 9: break
-    '''
+   3. Grant of Patent License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      (except as stated in this section) patent license to make, have made,
+      use, offer to sell, sell, import, and otherwise transfer the Work,
+      where such license applies only to those patent claims licensable
+      by such Contributor that are necessarily infringed by their
+      Contribution(s) alone or by combination of their Contribution(s)
+      with the Work to which such Contribution(s) was submitted. If You
+      institute patent litigation against any entity (including a
+      cross-claim or counterclaim in a lawsuit) alleging that the Work
+      or a Contribution incorporated within the Work constitutes direct
+      or contributory patent infringement, then any patent licenses
+      granted to You under this License for that Work shall terminate
+      as of the date such litigation is filed.
 
+   4. Redistribution. You may reproduce and distribute copies of the
+      Work or Derivative Works thereof in any medium, with or without
+      modifications, and in Source or Object form, provided that You
+      meet the following conditions:
 
+      (a) You must give any other recipients of the Work or
+          Derivative Works a copy of this License; and
 
+      (b) You must cause any modified files to carry prominent notices
+          stating that You changed the files; and
 
+      (c) You must retain, in the Source form of any Derivative Works
+          that You distribute, all copyright, patent, trademark, and
+          attribution notices from the Source form of the Work,
+          excluding those notices that do not pertain to any part of
+          the Derivative Works; and
 
+      (d) If the Work includes a "NOTICE" text file as part of its
+          distribution, then any Derivative Works that You distribute must
+          include a readable copy of the attribution notices contained
+          within such NOTICE file, excluding those notices that do not
+          pertain to any part of the Derivative Works, in at least one
+          of the following places: within a NOTICE text file distributed
+          as part of the Derivative Works; within the Source form or
+          documentation, if provided along with the Derivative Works; or,
+          within a display generated by the Derivative Works, if and
+          wherever such third-party notices normally appear. The contents
+          of the NOTICE file are for informational purposes only and
+          do not modify the License. You may add Your own attribution
+          notices within Derivative Works that You distribute, alongside
+          or as an addendum to the NOTICE text from the Work, provided
+          that such additional attribution notices cannot be construed
+          as modifying the License.
+
+      You may add Your own copyright statement to Your modifications and
+      may provide additional or different license terms and conditions
+      for use, reproduction, or distribution of Your modifications, or
+      for any such Derivative Works as a whole, provided Your use,
+      reproduction, and distribution of the Work otherwise complies with
+      the conditions stated in this License.
+
+   5. Submission of Contributions. Unless You explicitly state otherwise,
+      any Contribution intentionally submitted for inclusion in the Work
+      by You to the Licensor shall be under the terms and conditions of
+      this License, without any additional terms or conditions.
+      Notwithstanding the above, nothing herein shall supersede or modify
+      the terms of any separate license agreement you may have executed
+      with Licensor regarding such Contributions.
+
+   6. Trademarks. This License does not grant permission to use the trade
+      names, trademarks, service marks, or product names of the Licensor,
+      except as required for reasonable and customary use in describing the
+      origin of the Work and reproducing the content of the NOTICE file.
+
+   7. Disclaimer of Warranty. Unless required by applicable law or
+      agreed to in writing, Licensor provides the Work (and each
+      Contributor provides its Contributions) on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+      implied, including, without limitation, any warranties or conditions
+      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
+      PARTICULAR PURPOSE. You are solely responsible for determining the
+      appropriateness of using or redistributing the Work and assume any
+      risks associated with Your exercise of permissions under this License.
+
+   8. Limitation of Liability. In no event and under no legal theory,
+      whether in tort (including negligence), contract, or otherwise,
+      unless required by applicable law (such as deliberate and grossly
+      negligent acts) or agreed to in writing, shall any Contributor be
+      liable to You for damages, including any direct, indirect, special,
+      incidental, or consequential damages of any character arising as a
+      result of this License or out of the use or inability to use the
+      Work (including but not limited to damages for loss of goodwill,
+      work stoppage, computer failure or malfunction, or any and all
+      other commercial damages or losses), even if such Contributor
+      has been advised of the possibility of such damages.
+
+   9. Accepting Warranty or Additional Liability. While redistributing
+      the Work or Derivative Works thereof, You may choose to offer,
+      and charge a fee for, acceptance of support, warranty, indemnity,
+      or other liability obligations and/or rights consistent with this
+      License. However, in accepting such obligations, You may act only
+      on Your own behalf and on Your sole responsibility, not on behalf
+      of any other Contributor, and only if You agree to indemnify,
+      defend, and hold each Contributor harmless for any liability
+      incurred by, or claims asserted against, such Contributor by reason
+      of your accepting any such warranty or additional liability.
+
+   END OF TERMS AND CONDITIONS
+
+   APPENDIX: How to apply the Apache License to your work.
+
+      To apply the Apache License to your work, attach the following
+      boilerplate notice, with the fields enclosed by brackets "[]"
+      replaced with your own identifying information. (Don't include
+      the brackets!)  The text should be enclosed in the appropriate
+      comment syntax for the file format. We also recommend that a
+      file or class name and description of purpose be included on the
+      same "printed page" as the copyright notice for easier
+      identification within third-party archives.
+
+   Copyright [yyyy] [name of copyright owner]
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+"""

@@ -92,29 +92,5 @@ class SO3EquivConv(nn.Module):
         knn_F = ops.knn_gather(F, knn_result.idx.clone()).view(B, -1, F.size(-1))
         conv_F = self.conv_layer(knn_X, knn_F, self.k)
         return Q, self.activation(conv_F)
-        # return Q, conv_F
-
-
-if __name__ == '__main__':
-
-    torch.backends.cudnn.benchmark = True
-    import time
-    #from util.oxford import Oxford
-    from util.shapenetpart import ShapeNetPart
-    from omegaconf import OmegaConf
-    import pytorch3d
-    from torch.profiler import profile, record_function, ProfilerActivity
-    device = torch.device('cuda')
-    cfg_dict = OmegaConf.load('cfg/shapenetpart/shapenetpart_default.yaml')
-    model = CSE2ConvShapeNetPart(cfg_dict)
-    model = model.to(device)
-    oxford = ShapeNetPart(num_points=2048, split='train', batch=8)
-    with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], profile_memory=True, record_shapes=True) as prof: 
-        for i, (pc, label, seg) in enumerate(oxford.dataloader):
-            pc = pc.to(device); label = label.to(device)
-            f = model(pc, label)
-            print(f.shape); print(seg.shape)
-            if i >= 25: break
-    print(prof.key_averages().table(sort_by="cuda_memory_usage", row_limit=20))
 
 

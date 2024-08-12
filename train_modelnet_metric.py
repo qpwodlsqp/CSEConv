@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser(description='ModelNet40 Classification',
 
 parser.add_argument('--cfg', type=str, default=None, metavar='N',
                     help='configuration file name for the model architecture')
-parser.add_argument('--alpha', type=float, default=0.5, metavar='N',
+parser.add_argument('--alpha', type=float, default=1.2, metavar='N',
                     help='hyperparam for triplet & quadruplet')
 parser.add_argument('--beta', type=float, default=0.2, metavar='N',
                     help='hyperparam for quadruplet')

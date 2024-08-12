@@ -80,11 +80,9 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     if args.use_scheduler:
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs, eta_min=1e-5)
-        # scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.98)
 
     now = datetime.datetime.now()
     now_str = now.strftime('%m-%d-%H-%M-%S')
-    # nick = f"FNE-method_3-feature_KNN-on-Euclid_8pi_Shift_{args.cfg}_{now_str}"
     nick = f"CSEConv_{args.cfg}_{now_str}"
     os.makedirs(f"result/{nick}")
     wandb.init(project='ScanObjectNN Classification', entity='qpwodlsqp', config=vars(args))
