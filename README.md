@@ -101,4 +101,6 @@ CSEConv
         └── scannet_cls_rotated_best.pth
 ```
 ## Citation
-If you find this repository is useful for your project, please consider to cite it as belows.
+We will update this section and the link to our paper after it is officially published.
+```
+```
