@@ -101,6 +101,14 @@ CSEConv
         └── scannet_cls_rotated_best.pth
 ```
 ## Citation
-We will update this section and the link to our paper after it is officially published.
+[Paper PDF](https://www.ecva.net/papers/eccv_2024/papers_ECCV/papers/06843.pdf)
+
+We will update this section after our paper is officially published via proceedings.
 ```
+@conference{kim2024continuous,
+    author = {Kim, Jaein and Yoo, Hee Bin and Han, Dong-Sig and Song, Yeon-Ji and Zhang, Byoung-Tak },
+    booktitle = {European Conference on Computer Vision},
+    title = {Continuous SO(3) Equivariant Convolution for 3D Point Cloud Analysis},
+    year = {2024}
+}
 ```
