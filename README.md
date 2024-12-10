@@ -103,12 +103,13 @@ CSEConv
 ## Citation
 [Paper PDF](https://www.ecva.net/papers/eccv_2024/papers_ECCV/papers/06843.pdf)
 
-We will update this section after our paper is officially published via proceedings.
 ```
-@conference{kim2024continuous,
-    author = {Kim, Jaein and Yoo, Hee Bin and Han, Dong-Sig and Song, Yeon-Ji and Zhang, Byoung-Tak },
-    booktitle = {European Conference on Computer Vision},
-    title = {Continuous SO(3) Equivariant Convolution for 3D Point Cloud Analysis},
-    year = {2024}
+@inproceedings{kim2025continuous,
+  title={Continuous SO (3) Equivariant Convolution for 3D Point Cloud Analysis},
+  author={Kim, Jaein and Yoo, Hee Bin and Han, Dong-Sig and Song, Yeon-Ji and Zhang, Byoung-Tak},
+  booktitle={European Conference on Computer Vision},
+  pages={59--75},
+  year={2025},
+  organization={Springer}
 }
 ```
