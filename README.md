@@ -104,12 +104,12 @@ CSEConv
 [Paper PDF](https://www.ecva.net/papers/eccv_2024/papers_ECCV/papers/06843.pdf)
 
 ```
-@inproceedings{kim2025continuous,
+@inproceedings{kim2024continuous,
   title={Continuous SO (3) Equivariant Convolution for 3D Point Cloud Analysis},
   author={Kim, Jaein and Yoo, Hee Bin and Han, Dong-Sig and Song, Yeon-Ji and Zhang, Byoung-Tak},
   booktitle={European Conference on Computer Vision},
   pages={59--75},
-  year={2025},
+  year={2024},
   organization={Springer}
 }
 ```
